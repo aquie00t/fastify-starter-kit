@@ -1,10 +1,12 @@
+import todos from "./todo.routes.js";
+
 /**
  * Registers the main routes for the API.
  * @param {import("fastify").FastifyInstance} fastify - The Fastify instance.
  */
 export default async function routes(fastify) {
   // Register the todos routes with the prefix "/todos".
-  fastify.register(import("./todos.js"), { prefix: "/todos" });
+  fastify.register(todos, { prefix: "/todos" });
 
   /**
    * Root route for the API.

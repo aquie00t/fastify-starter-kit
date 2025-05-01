@@ -7,15 +7,13 @@ export default class TodoService {
    */
   constructor(fastify) {
     this.fastify = fastify;
+    this.collection = this.fastify.mongo.client.db().collection("todos");
   }
 
   /**
    * Retrieves the todos collection from the MongoDB database.
    * @returns {Promise<import("mongodb").Collection>} The todos collection.
    */
-  async collection() {
-    return await this.fastify.mongo.client.db().collection("todos");
-  }
 
   /**
    * Fetches all todos from the database.
@@ -43,14 +41,12 @@ export default class TodoService {
    * // ]
    */
   async getTodos() {
-    const todos = (await (await this.collection()).find().toArray()).map(
-      (doc) => {
-        return {
-          id: doc._id,
-          ...doc,
-        };
-      },
-    );
+    const todos = (await this.collection.find().toArray()).map((doc) => {
+      return {
+        id: doc._id,
+        ...doc,
+      };
+    });
 
     return todos;
   }
@@ -61,12 +57,10 @@ export default class TodoService {
    * @returns {Promise<Object|null>} The todo object or null if not found.
    */
   async getTodoById(id) {
-    const todo = await (
-      await this.collection()
-    ).findOne({ _id: new ObjectId(id) });
+    const todo = await this.collection.findOne({ _id: new ObjectId(id) });
 
     if (!todo) {
-      return null;
+      throw this.fastify.httpErrors.notFound("Todo not found");
     }
 
     return {
@@ -86,42 +80,44 @@ export default class TodoService {
    * @returns {Promise<Object>} The newly created todo.
    */
   async createTodo(body) {
-    const { title, description, isCompleted, createdAt, updatedAt } = body;
+    const newTodo = await this.collection.insertOne(body);
 
-    const newTodo = {
-      title,
-      description,
-      isCompleted,
-      createdAt,
-      updatedAt,
+    return {
+      id: newTodo.insertedId,
+      ...body,
     };
-
-    await (await this.collection()).insertOne(newTodo);
-
-    return newTodo;
   }
 
   /**
    * Updates an existing todo in the database.
    * @param {string} id - The ID of the todo to update.
    * @param {Object} body - The updated todo data.
-   * @param {string} body.title - The updated title of the todo.
-   * @param {string} body.description - The updated description of the todo.
-   * @param {boolean} body.isCompleted - The updated completion status.
+   * @param {string | null} body.title - The updated title of the todo.
+   * @param {string | null} body.description - The updated description of the todo.
+   * @param {boolean | null} body.isCompleted - The updated completion status.
    * @returns {Promise<Object>} The updated todo object.
    */
   async updateTodo(id, body) {
+    const todo = await this.getTodoById(id);
+
+    if (!todo) {
+      throw new this.fastify.httpErrors.badRequest("Todo Not Found.");
+    }
+
     const { title, description, isCompleted } = body;
 
     const updatedTodo = {
-      title,
-      description,
-      isCompleted,
+      title: title ?? todo.title,
+      description: description ?? todo.description,
+      isCompleted: isCompleted ?? todo.isCompleted,
+      createdAt: todo.createdAt,
+      updatedAt: new Date().toISOString(),
     };
 
-    await (
-      await this.collection()
-    ).updateOne({ _id: new ObjectId(id) }, { $set: updatedTodo });
+    await this.collection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedTodo },
+    );
 
     return updatedTodo;
   }
@@ -132,7 +128,7 @@ export default class TodoService {
    * @returns {Promise<Object>} The result of the delete operation.
    */
   async deleteTodo(id) {
-    const result = (await this.collection()).deleteOne({
+    const result = this.collection.deleteOne({
       _id: new ObjectId(id),
     });
 

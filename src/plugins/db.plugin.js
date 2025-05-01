@@ -8,9 +8,9 @@ import fastifyPlugin from "fastify-plugin";
  * Registers the MongoDB plugin with the Fastify instance using the connection URI and database name
  * from the Fastify configuration.
  */
-async function dbConnector(fastify) {
+async function db(fastify) {
   // Register the MongoDB plugin with the provided connection URI and database name.
-  fastify.register(fastifyMongo, {
+  await fastify.register(fastifyMongo, {
     url: fastify.config.MONGO_CONNECTION_URI, // MongoDB connection URI.
     dbName: fastify.config.MONGO_DB_NAME, // MongoDB database name.
   });
@@ -20,4 +20,4 @@ async function dbConnector(fastify) {
 }
 
 // Export the plugin wrapped with fastify-plugin for reusability.
-export default fastifyPlugin(dbConnector);
+export default fastifyPlugin(db);
