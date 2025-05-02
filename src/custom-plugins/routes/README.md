@@ -1,7 +1,5 @@
 # Custom Plugins (Özel Fastify Eklentileri)
 
-## 🇬🇧 English
-
 This folder contains custom plugins structured according to Fastify's plugin system.  
 It includes route handlers and JSON schemas that are registered as plugins using `fastify.register()`.
 
